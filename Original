@@ -1,0 +1,196 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat May 23 16:05:48 2020
+
+@author: Carlos García Guillén
+"""
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+from numba import njit
+from time import time
+
+"""
+
+
+tic=time()
+
+datos_df=pd.read_excel("Marzo_eur_usd_min.xlsx")
+#datos_df=pd.read_excel("EURUSDminuto.xlsx")
+#datos_df=pd.read_excel("EURUSDhora.xlsx")
+#datos_df=pd.read_excel("EURUSDdia.xlsx")
+#datos_df=pd.read_excel("GBPUSDminuto.xlsx")
+#datos_df=pd.read_excel("USDCHFminuto.xlsx")
+
+datos=np.zeros((datos_df.shape[0],4))
+
+for i in range (datos.shape[0]):
+    for j in range (4):
+        datos[i][j]=datos_df.iloc[i,j+1]
+     
+tac=time()  
+print("El tiempo de crear la matriz y leer los datos ha sido",tac-tic) 
+    
+        
+#sns.lineplot(data=datos_df["Open"],label="Open")
+
+"""
+rolls=50
+
+particiones=5
+
+"""
+
+
+
+alcista = 0
+bajista = 0
+alcista_pos=[]
+alcista_posj=[]
+bajista_pos=[]
+bajista_posj=[]
+repetidos_bajistas=[]
+repetidos_alcistas=[]
+minimo_pos=[]
+
+
+tamaño=int(rolls/particiones)
+
+
+for i in range (len(datos)-2*rolls): #Sería el peor caso de todos pero no queremos que dé error
+    
+    maximo_absoluto = 0
+    minimo_absoluto = 5 #Cualquier dato debe ser menor de 5
+    maximo_final = 0
+    minimo_final = 5
+    
+
+    media = np.zeros(particiones)
+        
+    for j in range (1, particiones+1): # 1, 2, 3, 4, 5
+        
+        numeros=np.zeros(tamaño)
+        
+        numeros_contador = -1
+    
+        for k in range (tamaño*(j-1), tamaño*j): #0-19, 20-39, 40-59, 60-79, 80-99
+            
+            
+            numeros_contador += 1
+            
+            maximo_absoluto = max (maximo_absoluto, datos [i+k, 1])
+            
+            minimo_absoluto = min (minimo_absoluto, datos [i+k, 2])
+            
+            numeros[numeros_contador]=((datos[i+k, 1] + datos[i+k, 2]) / 2) #La media entre el máximo y mínimo de cada vela
+             
+            if j == particiones:
+                
+                maximo_final = max (maximo_final, datos [i+k, 1])
+                minimo_final = min (minimo_final, datos [i+k, 2])
+            
+        media[j-1] = np.mean (numeros)
+                
+       
+    media_ordenada = np.zeros ([len(media)])
+    media_inversa = np.zeros ([len(media)])
+    
+    for ii in range (len (media_ordenada)):
+        media_ordenada[ii] = media[ii]
+        
+    
+    media_ordenada.sort()
+    media_inversa = media_ordenada[::-1]
+    
+
+    if maximo_absoluto == maximo_final and np.array_equal (media, media_ordenada):  
+        
+    #Posible sushi bajista ya que ha subido ordenado, esperamos a la remontada 
+    
+        sushi_bajista = False    
+        j = rolls
+        pico_alcanzado = False
+        minimo_alcanzado = False
+                
+        while sushi_bajista == False and j < 2*rolls:
+            
+            j += 1
+        
+            if datos[i+j, 1] > maximo_absoluto:
+                pico_alcanzado = True
+                pos_pico=j
+
+                
+            elif datos[i+j, 2] < minimo_absoluto and minimo_alcanzado == False:
+                minimo_alcanzado = True
+                pos_min=j
+                
+                
+
+            
+            if pico_alcanzado == True and minimo_alcanzado == True and pos_min > pos_pico:
+                
+                sushi_bajista = True
+                
+                if (i-1) in repetidos_bajistas or (i-1) in bajista_pos:
+                
+                    repetidos_bajistas.append(i)
+                
+                else:
+                    bajista += 1
+                    bajista_pos.append(i)
+                    bajista_posj.append(j)
+                    
+                    
+  
+    
+    
+    elif minimo_absoluto == minimo_final and np.array_equal (media, media_inversa):      
+    
+    #Posible sushi alcista ya que ha bajado ordenado, esperamos a la remontada
+        
+        sushi_alcista = False    
+        j = rolls
+        valle_alcanzado = False
+        maximo_alcanzado = False
+    
+        while sushi_alcista == False and j < 2*rolls:
+            
+            j += 1
+            
+            if datos[i+j, 2] < minimo_absoluto:
+                valle_alcanzado = True
+                pos_valle = j
+
+                
+            if datos[i+j, 1] > maximo_absoluto and maximo_alcanzado == False:
+                maximo_alcanzado = True
+                pos_maximo = j
+
+            
+            if valle_alcanzado == True and maximo_alcanzado == True and pos_maximo > pos_valle:
+                
+            
+                sushi_alcista = True
+                
+                if (i-1) in repetidos_alcistas or (i-1) in alcista_pos:
+                    
+                    repetidos_alcistas.append(i)
+                
+                else: 
+                    alcista += 1
+                    alcista_pos.append(i)
+                    alcista_posj.append(j)
+
+
+"""
+n=96
+representar=np.zeros(n)
+
+for i in range (n):
+    representar[i]=datos[5498+i,1]
+
+    
+sns.lineplot(data=representar,label="Alcista")    
